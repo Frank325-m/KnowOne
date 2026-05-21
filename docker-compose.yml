@@ -1,0 +1,100 @@
+# RAG 知识库问答系统 Docker Compose 配置
+# 包含 RAG 应用和 Ollama 服务
+
+version: '3.8'
+
+services:
+  # Ollama 服务 - 提供本地大模型
+  ollama:
+    image: ollama/ollama:latest
+    container_name: rag-ollama
+    restart: unless-stopped
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - OLLAMA_HOST=0.0.0.0
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - rag-network
+
+  # RAG Web 应用
+  rag-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-web-app
+    restart: unless-stopped
+    ports:
+      - "7801:7801"
+    volumes:
+      - ./docs:/app/docs
+      - ./res:/app/res
+      - ./logs:/app/logs
+      - ./model_cache:/app/model_cache
+      - ./.env:/app/.env
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - OLLAMA_MODEL=qwen:4b
+      - EMBED_MODEL_NAME=mofanke/dmeta-embedding-zh
+      - WEB_HOST=0.0.0.0
+      - WEB_PORT=7801
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - rag-network
+    command: >
+      sh -c "
+        echo '等待 Ollama 服务启动...' &&
+        sleep 30 &&
+        echo '拉取 Ollama 模型...' &&
+        ollama pull qwen:4b &&
+        ollama pull mofanke/dmeta-embedding-zh &&
+        echo '启动 RAG Web 应用...' &&
+        python web_rag_app.py
+      "
+
+  # 可选：向量数据库初始化服务
+  vector-db-init:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: rag-vector-init
+    restart: "no"
+    volumes:
+      - ./docs:/app/docs
+      - ./res:/app/res
+      - ./logs:/app/logs
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    depends_on:
+      ollama:
+        condition: service_healthy
+    networks:
+      - rag-network
+    command: >
+      sh -c "
+        echo '等待 Ollama 服务完全启动...' &&
+        sleep 60 &&
+        echo '初始化向量数据库...' &&
+        python main.py create --force &&
+        echo '向量数据库初始化完成！'
+      "
+
+# 网络配置
+networks:
+  rag-network:
+    driver: bridge
+
+# 卷配置
+volumes:
+  ollama_data:
+    driver: local
