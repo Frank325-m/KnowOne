@@ -79,7 +79,7 @@ DATA_FILES = [
     ("utils", "utils"),
     ("web", "web"),
     ("docs", "docs"),
-    ("res", "res"),
+    ("resource", "resource"),
     ("logs", "logs"),
 ]
 
@@ -429,9 +429,13 @@ dist/
 ├── core/                      # 核心模块
 ├── utils/                     # 工具模块
 ├── web/                       # Web 模块
-├── docs/                      # 文档目录
-├── res/                       # 资源目录
+├── docs/                      # 项目文档目录（指南、说明等）
 ├── logs/                      # 日志目录
+├── model_cache/               # 模型缓存目录
+├── resource/                  # 资源目录
+│   ├── docs/                  # 知识库源文档目录
+│   └── vector_db/             # 向量数据库统一管理目录
+│       └── chroma_db/         # ChromaDB 向量数据库
 ├── .env.example               # 环境变量示例
 ├── README.md                  # 项目说明
 └── requirements.txt           # 依赖包列表
@@ -519,8 +523,8 @@ LOG_LEVEL="INFO"
 ```
 
 ### 目录配置
-- `docs/`: 存放上传的文档文件
-- `res/chroma_db/`: 向量数据库存储
+- `resource/docs/`: 存放知识库源文档文件
+- `resource/vector_db/chroma_db/`: 向量数据库存储
 - `model_cache/`: 模型缓存
 - `logs/`: 日志文件
 

@@ -23,8 +23,8 @@ class Settings(BaseSettings):
     BASE_DIR: Path = Path(__file__).parent.parent
     
     # 数据路径
-    DOCS_DIR: Path = Field(default=Path("./docs"), description="文档存储目录")
-    VECTOR_DB_DIR: Path = Field(default=Path("./res/chroma_db"), description="向量数据库目录")
+    DOCS_DIR: Path = Field(default=Path("./resource/docs"), description="文档存储目录")
+    VECTOR_DB_DIR: Path = Field(default=Path("./resource/vector_db/chroma_db"), description="向量数据库目录")
     MODEL_CACHE_DIR: Path = Field(default=Path("./model_cache"), description="模型缓存目录")
     LOG_DIR: Path = Field(default=Path("./logs"), description="日志目录")
     

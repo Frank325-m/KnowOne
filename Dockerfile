@@ -36,7 +36,7 @@ WORKDIR /app
 RUN groupadd -r raguser && useradd -r -g raguser raguser
 
 # 创建必要的目录
-RUN mkdir -p /app/docs /app/res /app/logs /app/model_cache \
+RUN mkdir -p /app/docs /app/resource /app/logs /app/model_cache \
     && chown -R raguser:raguser /app
 
 # 从构建阶段复制已安装的 Python 包

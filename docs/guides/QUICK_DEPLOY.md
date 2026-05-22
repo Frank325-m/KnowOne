@@ -26,8 +26,10 @@ deploy.bat full
 
 ```
 my-rag-project/
-├── docs/                    # 文档目录（放入您的文档）
-├── res/                    # 向量数据库
+├── docs/                    # 项目文档目录（指南、说明等）
+├── resource/               # 资源目录
+│   └── docs/                # 知识库源文档目录（放入您的文档）
+├── resource/              # 向量数据库
 ├── logs/                   # 日志文件
 ├── config/                 # 配置文件
 ├── core/                   # 核心功能模块
@@ -44,13 +46,13 @@ my-rag-project/
 ## 🔧 基本配置
 
 ### 1. 准备文档
-将您的文档（txt, pdf, docx格式）放入 `docs/` 目录：
+将您的文档（txt, pdf, docx格式）放入 `resource/docs/` 目录：
 ```bash
 # 创建文档目录
 mkdir -p docs
 
-# 复制您的文档到 docs/ 目录
-cp your_documents/* docs/
+# 复制您的文档到 resource/docs/ 目录
+cp your_documents/* resource/docs/
 ```
 
 ### 2. 环境配置（可选）
@@ -117,7 +119,7 @@ docker system prune -f
 ## 📊 系统功能
 
 ### 1. 文档管理
-- 自动扫描 `docs/` 目录中的文档
+- 自动扫描 `resource/docs/` 目录中的文档
 - 支持 txt, pdf, docx 格式
 - 实时刷新文档列表
 
@@ -137,7 +139,7 @@ docker system prune -f
 修改 `.env` 文件中的 `WEB_PORT` 配置，然后重启服务。
 
 ### Q2: 如何添加新文档？
-将新文档放入 `docs/` 目录，然后在 Web 界面点击"刷新文档列表"。
+将新文档放入 `resource/docs/` 目录，然后在 Web 界面点击"刷新文档列表"。
 
 ### Q3: 如何更换模型？
 修改 `.env` 文件中的模型配置，然后重启服务。
@@ -165,10 +167,10 @@ docker-compose run --rm vector-db-init
 ### 备份数据
 ```bash
 # 备份向量数据库
-tar -czf backup_$(date +%Y%m%d).tar.gz res/
+tar -czf backup_$(date +%Y%m%d).tar.gz resource/
 
 # 备份文档
-tar -czf docs_backup_$(date +%Y%m%d).tar.gz docs/
+tar -czf docs_backup_$(date +%Y%m%d).tar.gz resource/docs/
 ```
 
 ### 恢复数据

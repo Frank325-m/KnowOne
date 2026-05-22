@@ -79,11 +79,13 @@ my-rag-project/
 │   ├── vector_factory.py # 向量数据库工厂（旧版）
 │   ├── exceptions.py    # 自定义异常
 │   └── vector_db/       # 向量数据库模块（新版）
-├── docs/                # 知识库源文档
+├── docs/                # 项目文档（指南、说明、总结等）
 ├── logs/                # 日志文件目录
 ├── model_cache/         # 模型缓存目录
-├── res/                 # 资源文件
-│   └── chroma_db/       # 向量数据库
+├── resource/           # 资源文件
+│   ├── docs/           # 知识库源文档（主位置）
+│   └── vector_db/      # 向量数据库统一管理目录
+│       └── chroma_db/  # ChromaDB 向量数据库存储目录
 ├── scripts/             # 脚本文件
 │   └── build_exe.py     # 打包脚本
 ├── tests/               # 测试文件
@@ -215,7 +217,7 @@ cp .env.example .env
 
 #### 3. 初始化知识库
 ```bash
-# 创建向量数据库（处理 docs/ 目录下的所有文档）
+# 创建向量数据库（处理 resource/docs/ 目录下的所有文档）
 python main.py create --force
 
 # 验证向量数据库状态
@@ -294,8 +296,8 @@ python main.py info
 - **向量数据库**：支持 ChromaDB、FAISS、Milvus、Qdrant（可配置切换）
 
 ### 路径配置
-- **文档目录**：`./docs`（存放知识库文档）
-- **向量数据库**：`./res/chroma_db`（向量数据存储）
+- **文档目录**：`./resource/docs`（存放知识库源文档）
+- **向量数据库**：`./resource/vector_db/chroma_db`（向量数据存储）
 - **模型缓存**：`./model_cache`（模型缓存目录）
 - **日志目录**：`./logs`（应用日志文件）
 
@@ -330,7 +332,7 @@ OLLAMA_LLM_MODEL=qwen:4b
 OLLAMA_EMBEDDING_MODEL=mofanke/dmeta-embedding-zh
 
 # 向量数据库配置
-VECTOR_DB_DIR=./res/chroma_db
+VECTOR_DB_DIR=./resource/vector_db/chroma_db
 VECTOR_DB_COLLECTION=rag_knowledge_base
 
 # 文档处理配置
@@ -656,13 +658,64 @@ tail -f logs/app.log
 ### 📋 快速检查清单
 1. ✅ Ollama 服务是否运行：`ollama list`
 2. ✅ 依赖包是否完整：`pip list | grep -E "pypdf|docx2txt|langchain"`
-3. ✅ 向量数据库是否存在：检查 `res/chroma_db/` 目录
+3. ✅ 向量数据库是否存在：检查 `resource/vector_db/chroma_db/` 目录
 4. ✅ 环境变量是否正确：检查 `.env` 文件
 5. ✅ 端口是否可用：检查端口 7801 是否被占用
 
-## 架构演进
+## 架构演进与验证
 
-详细的架构演进说明请参考：[ARCHITECTURE_EVOLUTION.md](ARCHITECTURE_EVOLUTION.md)
+### 测试验证 ✅
+新的向量数据库架构已通过全面测试：
+
+```bash
+# 运行架构测试
+python tests/test_new_architecture_simple.py
+
+# 测试结果
+新的向量数据库架构测试
+============================================================
+[OK] 通过 抽象基类测试
+[OK] 通过 工厂模式测试  
+[OK] 通过 ChromaDB 集成测试
+[OK] 通过 自定义存储测试
+总计: 4/4 个测试通过
+[SUCCESS] 所有测试通过！新的向量数据库架构工作正常。
+```
+
+### 核心特性验证
+- ✅ **抽象基类**: `BaseVectorStore` 正确实现抽象方法约束
+- ✅ **工厂模式**: `vector_db_factory` 支持所有数据库类型
+- ✅ **多数据库支持**: ChromaDB、FAISS、Milvus、Qdrant
+- ✅ **向后兼容**: 保持原有 `vector_utils.py` 接口不变
+- ✅ **类型安全**: 完整的 Python 类型注解
+- ✅ **错误处理**: 完善的异常处理和资源管理
+
+### 快速开始
+想要立即开始使用？查看以下资源：
+
+1. **快速使用指南**: [VECTOR_DB_QUICK_START.md](docs/guides/VECTOR_DB_QUICK_START.md)
+2. **交互式演示**: 运行 `python examples/vector_db_demo.py`
+3. **架构测试**: 运行 `python tests/test_new_architecture_simple.py`
+
+### 示例代码
+```python
+# 基本使用示例
+from langchain_ollama import OllamaEmbeddings
+from core.vector_db.vector_db_factory import get_vector_store
+
+# 创建向量数据库
+embedding = OllamaEmbeddings(model="mofanke/dmeta-embedding-zh")
+vector_store = get_vector_store(engine="chroma", embedding=embedding)
+
+# 添加文档
+vector_store.add_documents(documents)
+
+# 检索文档
+results = vector_store.search("人工智能", top_k=3)
+```
+
+### 详细文档
+完整的架构演进说明请参考：[ARCHITECTURE_EVOLUTION.md](ARCHITECTURE_EVOLUTION.md)
 
 该文档描述了向量数据库架构从 V1 到 V2 的完整演进过程，包括：
 - 架构设计理念的变化

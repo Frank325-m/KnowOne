@@ -69,10 +69,8 @@ tmp/
 *.sqlite3
 
 # 文档文件（可根据需要调整）
-docs/*.pdf
-docs/*.docx
-docs/*.txt
-!docs/README.md
+resource/docs/**
+resource/vector_db/**
 
 # 可执行文件打包输出
 dist/
@@ -92,3 +90,4 @@ htmlcov/
 *.bak
 *.tmp
 *.temp
+*.bin

@@ -29,7 +29,7 @@ cd my-rag-project
 ```
 
 ### 2. 准备文档
-将您的文档放入 `docs/` 目录：
+将您的文档放入 `resource/docs/` 目录：
 ```bash
 mkdir -p docs
 # 将您的文档（txt, pdf, docx）复制到 docs/ 目录
@@ -141,7 +141,7 @@ deploy.bat status     # 查看状态
 - 功能: 提供 Web 界面进行文档管理和问答
 - 数据卷:
   - `./docs` -> `/app/docs` (文档目录)
-  - `./res` -> `/app/res` (向量数据库)
+  - `./resource` -> `/app/resource` (资源目录)
   - `./logs` -> `/app/logs` (日志文件)
   - `./model_cache` -> `/app/model_cache` (模型缓存)
 
@@ -211,7 +211,7 @@ docker exec rag-ollama ollama pull llama2:7b
 ### 备份数据
 ```bash
 # 备份向量数据库
-tar -czf vector_db_backup.tar.gz res/
+tar -czf vector_db_backup.tar.gz resource/
 
 # 备份文档
 tar -czf docs_backup.tar.gz docs/
