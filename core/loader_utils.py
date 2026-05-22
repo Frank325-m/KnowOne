@@ -41,13 +41,10 @@ logger = get_logger(__name__)
 def load_single_file(file_path: Union[str, Path]) -> List[Document]:
     """
     加载单文件，自动匹配格式
-    
     Args:
         file_path: 文件路径
-        
     Returns:
         文档列表
-        
     Raises:
         DocumentFormatError: 如果文件格式不支持
         DocumentLoadError: 如果文件加载失败

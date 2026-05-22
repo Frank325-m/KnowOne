@@ -1,16 +1,17 @@
 """
 向量数据库工具模块
 处理向量数据库的创建、加载、检索等操作
+支持多种向量数据库：ChromaDB、FAISS、Milvus、Qdrant
 """
 
 import os
 import logging
-from typing import List, Tuple, Optional, Callable
+from typing import List, Tuple, Optional, Callable, Union
 from pathlib import Path
 
-from langchain_chroma import Chroma
-from langchain_ollama import OllamaEmbeddings
 from langchain_core.documents import Document
+from langchain_core.vectorstores import VectorStore
+from langchain_ollama import OllamaEmbeddings
 
 from config.settings import settings
 from config.logging_config import get_logger
@@ -25,6 +26,7 @@ from core.exceptions import (
     NoRelevantDocumentsError,
     handle_rag_error
 )
+from core.vector_factory import VectorStoreFactory
 
 # 获取日志记录器
 logger = get_logger(__name__)
@@ -65,55 +67,45 @@ def get_embedding_model() -> OllamaEmbeddings:
 def create_vector_store(
     chunk_docs: List[Document],
     persist_dir: Optional[Path] = None,
-    collection_name: str = "rag_knowledge_base"
-) -> Chroma:
+    collection_name: str = None
+) -> VectorStore:
     """
     创建向量数据库
-    把切块后的文本-> 向量化 -> 存入Chroma
-    并持久化到本地磁盘
+    把切块后的文本-> 向量化 -> 存入向量数据库
+    支持多种向量数据库：ChromaDB、FAISS、Milvus、Qdrant
     
     Args:
         chunk_docs: 切块后的文档列表
-        persist_dir: 持久化目录，如果为 None 则使用配置中的目录
+        persist_dir: 持久化目录（仅对本地数据库有效）
         collection_name: 集合名称
         
     Returns:
-        Chroma 向量数据库实例
+        VectorStore 实例
         
     Raises:
         VectorDBCreationError: 如果无法创建向量数据库
     """
     try:
-        if persist_dir is None:
-            persist_dir = settings.vector_db_dir_abs
-        
-        # 确保目录存在
-        persist_dir.mkdir(parents=True, exist_ok=True)
-        
-        logger.info(f"正在创建向量数据库，文档数量: {len(chunk_docs)}")
-        logger.info(f"持久化目录: {persist_dir}")
-        logger.info(f"集合名称: {collection_name}")
+        logger.info(f"正在创建 {settings.VECTOR_DB_TYPE} 向量数据库，文档数量: {len(chunk_docs)}")
         
         # 获取嵌入模型
         embedding_model = get_embedding_model()
         
-        # 创建向量库
-        vector_store = Chroma.from_documents(
+        # 使用工厂创建向量数据库
+        vector_store = VectorStoreFactory.create_vector_store(
             documents=chunk_docs,
             embedding=embedding_model,
-            persist_directory=str(persist_dir),
             collection_name=collection_name
         )
         
-        logger.info(f"向量数据库创建成功，已保存到: {persist_dir}")
-        logger.info(f"向量数量: {vector_store._collection.count()}")
+        logger.info(f"{settings.VECTOR_DB_TYPE} 向量数据库创建成功")
         
         return vector_store
         
     except Exception as e:
         logger.error(f"向量数据库创建失败: {e}")
         raise VectorDBCreationError(
-            db_path=str(persist_dir) if persist_dir else str(settings.vector_db_dir_abs),
+            db_path=VectorStoreFactory._get_db_path(),
             error=str(e)
         )
 
@@ -121,54 +113,35 @@ def create_vector_store(
 @handle_rag_error
 def load_existing_vector_store(
     persist_dir: Optional[Path] = None,
-    collection_name: str = "rag_knowledge_base"
-) -> Chroma:
+    collection_name: str = None
+) -> VectorStore:
     """
     加载已存在的向量数据库
     
     Args:
-        persist_dir: 持久化目录，如果为 None 则使用配置中的目录
+        persist_dir: 持久化目录（仅对本地数据库有效）
         collection_name: 集合名称
         
     Returns:
-        Chroma 向量数据库实例
+        VectorStore 实例
         
     Raises:
         VectorDBNotFoundError: 如果向量数据库不存在
         VectorDBError: 如果无法加载向量数据库
     """
     try:
-        if persist_dir is None:
-            persist_dir = settings.vector_db_dir_abs
-        
-        # 检查向量数据库是否存在
-        if not persist_dir.exists():
-            logger.error(f"向量数据库目录不存在: {persist_dir}")
-            raise VectorDBNotFoundError(db_path=str(persist_dir))
-        
-        # 检查目录是否为空
-        if not any(persist_dir.iterdir()):
-            logger.error(f"向量数据库目录为空: {persist_dir}")
-            raise VectorDBNotFoundError(db_path=str(persist_dir))
-        
-        logger.info(f"正在加载向量数据库: {persist_dir}")
+        logger.info(f"正在加载 {settings.VECTOR_DB_TYPE} 向量数据库")
         
         # 获取嵌入模型
         embedding_model = get_embedding_model()
         
-        # 加载向量库
-        vector_store = Chroma(
-            persist_directory=str(persist_dir),
-            embedding_function=embedding_model,
+        # 使用工厂加载向量数据库
+        vector_store = VectorStoreFactory.load_vector_store(
+            embedding=embedding_model,
             collection_name=collection_name
         )
         
-        # 验证向量库是否有效
-        count = vector_store._collection.count()
-        if count == 0:
-            logger.warning(f"向量数据库为空，文档数量: 0")
-        else:
-            logger.info(f"向量数据库加载成功，文档数量: {count}")
+        logger.info(f"{settings.VECTOR_DB_TYPE} 向量数据库加载成功")
         
         return vector_store
         
@@ -178,7 +151,7 @@ def load_existing_vector_store(
         logger.error(f"向量数据库加载失败: {e}")
         raise VectorDBError(
             message="无法加载向量数据库",
-            db_path=str(persist_dir) if persist_dir else str(settings.vector_db_dir_abs),
+            db_path=VectorStoreFactory._get_db_path(),
             details={"error": str(e)}
         )
 
@@ -189,7 +162,7 @@ def get_retriever(
     search_type: str = None,
     fetch_k: int = None,
     lambda_mult: float = None
-) -> Chroma:
+):
     """
     获取向量数据库的检索器
     
@@ -370,7 +343,7 @@ def manual_search_query(
 def get_rerank_retriever(
     top_k: int = None,
     fetch_k: int = None
-) -> Tuple[Chroma, Callable]:
+):
     """
     获取重排后的检索器
     
@@ -512,27 +485,12 @@ def get_vector_store_info() -> dict:
         VectorDBError: 如果无法获取信息
     """
     try:
-        vector_store = load_existing_vector_store()
-        collection = vector_store._collection
-        
-        info = {
-            "collection_name": collection.name,
-            "document_count": collection.count(),
-            "metadata": collection.metadata,
-            "persist_directory": str(settings.vector_db_dir_abs),
-            "embedding_model": settings.EMBED_MODEL_NAME,
-            "exists": True
-        }
+        # 使用工厂获取向量数据库信息
+        info = VectorStoreFactory.get_vector_store_info()
         
         logger.debug(f"向量数据库信息: {info}")
         return info
         
-    except VectorDBNotFoundError:
-        return {
-            "exists": False,
-            "persist_directory": str(settings.vector_db_dir_abs),
-            "message": "向量数据库不存在"
-        }
     except Exception as e:
         logger.error(f"获取向量数据库信息失败: {e}")
         raise VectorDBError(

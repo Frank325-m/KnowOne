@@ -4,16 +4,31 @@
 
 ## 📋 更新日志
 
-### 🎯 最新更新 (2026-05-21)
+### 🎯 最新更新 (2026-05-22)
 
-✅ **问题修复**：解决了 "未找到相关文档" 错误
-- 🔧 **修复了文档加载问题**：安装缺失的依赖包 `pypdf` 和 `docx2txt`
-- 🔧 **修复了 ChromaDB API 兼容性**：适配最新 langchain-chroma 版本
-- 🔧 **更新了嵌入模型**：改用本地 Ollama 模型 `mofanke/dmeta-embedding-zh`
+✅ **向量数据库架构重构**：全新的模块化设计
+- 🏗️ **基类设计**：引入 `BaseVectorStore` 抽象基类
+- 🏭 **工厂模式**：`vector_db_factory.py` 统一创建接口
+- � **插件化架构**：每个向量数据库独立实现
+- 🔄 **向后兼容**：保持原有 API 接口不变
 
-✅ **系统状态**：向量数据库已重建，包含 428 个向量，支持所有文档格式
+✅ **新增向量数据库支持**：
+- 🗃️ **ChromaDB**：本地轻量级向量数据库（默认）
+- 📊 **FAISS**：Facebook AI 相似性搜索库
+- ☁️ **Milvus**：云原生向量数据库
+- ⚡ **Qdrant**：高性能向量搜索引擎
+
+✅ **代码质量提升**：
+- 🔧 **类型提示**：完整的 Python 类型注解
+- 🐛 **错误修复**：修复了 FAISS 实现中的语法错误
+- � **文档更新**：完整的 API 使用示例
 
 ### 📅 历史更新
+
+#### 2026-05-22
+- ✅ **多向量数据库支持**：安装 faiss、milvus、qdrant 依赖
+- ✅ **配置系统扩展**：添加向量数据库类型配置
+- ✅ **工厂模式实现**：`VectorStoreFactory` 支持无缝切换
 
 #### 2026-05-21
 - ✅ **Docker 部署**：添加 Dockerfile 和 docker-compose.yml
@@ -42,6 +57,7 @@
 
 - 📚 **文档管理**：支持 PDF、TXT、DOCX 格式文档上传和管理
 - 🔍 **智能检索**：基于向量数据库的语义检索
+- 🗄️ **多向量数据库**：支持 ChromaDB、FAISS、Milvus、Qdrant 无缝切换
 - 🤖 **本地大模型**：使用 Ollama 本地大模型，全程离线运行
 - 🎯 **重排优化**：MMR（最大边际相关性）检索重排
 - 🌐 **Web 界面**：基于 Gradio 6.x 的友好用户界面
@@ -54,19 +70,16 @@
 ```
 my-rag-project/
 ├── config/              # 配置文件
-│   ├── __init__.py
 │   ├── settings.py      # 应用配置
 │   └── logging_config.py # 日志配置
 ├── core/                # 核心功能模块
-│   ├── __init__.py
 │   ├── llm_utils.py     # 大模型工具
 │   ├── loader_utils.py  # 文档加载器
-│   ├── vector_utils.py  # 向量数据库工具
-│   └── exceptions.py    # 自定义异常
-├── docs/                # 知识库文档
-│   ├── test.txt
-│   ├── test.pdf
-│   └── test.docx
+│   ├── vector_utils.py  # 向量数据库工具（高级接口）
+│   ├── vector_factory.py # 向量数据库工厂（旧版）
+│   ├── exceptions.py    # 自定义异常
+│   └── vector_db/       # 向量数据库模块（新版）
+├── docs/                # 知识库源文档
 ├── logs/                # 日志文件目录
 ├── model_cache/         # 模型缓存目录
 ├── res/                 # 资源文件
@@ -75,10 +88,8 @@ my-rag-project/
 │   └── build_exe.py     # 打包脚本
 ├── tests/               # 测试文件
 ├── utils/               # 工具函数
-│   ├── __init__.py
 │   └── file_utils.py    # 文件工具
 ├── web/                 # Web 应用
-│   ├── __init__.py
 │   └── app.py           # Web 应用主文件
 ├── main.py              # 命令行入口
 ├── web_rag_app.py       # Web 应用入口
@@ -280,7 +291,7 @@ python main.py info
 ### 模型配置
 - **大模型**：Ollama Qwen 4B（可配置其他模型）
 - **嵌入模型**：Ollama `mofanke/dmeta-embedding-zh`（本地中文嵌入模型）
-- **向量数据库**：ChromaDB（本地持久化）
+- **向量数据库**：支持 ChromaDB、FAISS、Milvus、Qdrant（可配置切换）
 
 ### 路径配置
 - **文档目录**：`./docs`（存放知识库文档）
@@ -295,6 +306,23 @@ python main.py info
 # 应用配置
 APP_HOST=0.0.0.0
 APP_PORT=7801
+
+# 向量数据库配置
+VECTOR_DB_TYPE=chroma  # chroma/faiss/milvus/qdrant
+VECTOR_DB_COLLECTION=rag_knowledge_base
+VECTOR_DB_PERSIST=true
+
+# Milvus 配置（如使用 Milvus）
+MILVUS_HOST=localhost
+MILVUS_PORT=19530
+MILVUS_USER=
+MILVUS_PASSWORD=
+
+# Qdrant 配置（如使用 Qdrant）
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+QDRANT_API_KEY=
+QDRANT_PREFER_GRPC=false
 
 # Ollama 配置
 OLLAMA_BASE_URL=http://localhost:11434
@@ -333,7 +361,7 @@ LAMBDA_MULT=0.5
 ├─────────────────────────────────────────────────────────────┤
 │  ┌───────────────────────────────────────────────────────┐ │
 │  │                   数据存储层                           │ │
-│  │  - 向量数据库 (ChromaDB)                              │ │
+│  │  - 向量数据库 (Chroma/FAISS/Milvus/Qdrant)            │ │
 │  │  - 本地文件系统 (文档存储)                            │ │
 │  │  - 模型缓存 (Ollama)                                  │ │
 │  └───────────────────────────────────────────────────────┘ │
@@ -354,9 +382,18 @@ LAMBDA_MULT=0.5
 - **支持格式**：PDF, TXT, DOCX
 - **关键技术**：文本分块、编码处理、质量过滤
 
-#### 2. **向量数据库模块** (`core/vector_utils.py`)
+#### 2. **向量数据库模块** (`core/vector_db/`)
+- **架构**：基于抽象基类的模块化设计
+- **基类**：`BaseVectorStore` - 定义统一接口
+- **工厂**：`vector_db_factory.py` - 动态创建数据库实例
+- **实现**：
+  - `chroma_db.py` - ChromaDB 实现
+  - `faiss_db.py` - FAISS 实现  
+  - `milvus_db.py` - Milvus 实现
+  - `qdrant_db.py` - Qdrant 实现
 - **功能**：文档向量化、存储、检索
-- **数据库**：ChromaDB（本地持久化）
+- **支持数据库**：ChromaDB、FAISS、Milvus、Qdrant（无缝切换）
+- **设计模式**：工厂模式 + 策略模式
 - **嵌入模型**：Ollama `mofanke/dmeta-embedding-zh`
 - **检索算法**：相似度检索 + MMR 重排
 
@@ -378,7 +415,7 @@ LAMBDA_MULT=0.5
 ### 工作流程
 1. **文档处理流程**：
    ```
-   原始文档 → 加载 → 清洗 → 分割 → 向量化 → 存储到 ChromaDB
+   原始文档 → 加载 → 清洗 → 分割 → 向量化 → 存储到向量数据库
    ```
 
 2. **问答流程**：
@@ -391,7 +428,86 @@ LAMBDA_MULT=0.5
    检查配置 → 加载向量数据库 → 启动大模型 → 启动 Web 服务
    ```
 
-## 🛠️ 开发指南
+## 🗄️ 多向量数据库使用指南
+
+### 架构概述
+新的向量数据库架构采用模块化设计：
+- **基类设计**：`BaseVectorStore` 抽象基类定义统一接口
+- **工厂模式**：`vector_db_factory.py` 负责动态创建数据库实例
+- **策略模式**：每个数据库实现独立的策略类
+- **向后兼容**：保持原有 `vector_utils.py` 接口不变
+
+### 支持的向量数据库
+1. **ChromaDB** (默认) - 本地轻量级向量数据库
+2. **FAISS** - Facebook AI 相似性搜索库
+3. **Milvus** - 云原生向量数据库
+4. **Qdrant** - 高性能向量搜索引擎
+
+### 切换向量数据库
+通过修改 `.env` 文件中的 `VECTOR_DB_TYPE` 配置：
+
+```bash
+# 使用 ChromaDB (默认)
+VECTOR_DB_TYPE=chroma
+
+# 使用 FAISS
+VECTOR_DB_TYPE=faiss
+
+# 使用 Milvus (需要运行 Milvus 服务)
+VECTOR_DB_TYPE=milvus
+
+# 使用 Qdrant (需要运行 Qdrant 服务)
+VECTOR_DB_TYPE=qdrant
+```
+
+### 数据库特定配置
+
+#### FAISS 配置
+```bash
+# FAISS 会自动持久化到本地文件
+VECTOR_DB_PERSIST=true
+```
+
+#### Milvus 配置
+```bash
+# Milvus 服务地址
+MILVUS_HOST=localhost
+MILVUS_PORT=19530
+# 如果需要认证
+MILVUS_USER=your_username
+MILVUS_PASSWORD=your_password
+```
+
+#### Qdrant 配置
+```bash
+# Qdrant 服务地址
+QDRANT_HOST=localhost
+QDRANT_PORT=6333
+# API密钥 (如有)
+QDRANT_API_KEY=your_api_key
+# 是否使用 gRPC 协议
+QDRANT_PREFER_GRPC=false
+```
+
+### 测试向量数据库
+```bash
+# 运行测试脚本
+python test_vector_dbs.py
+
+# 测试特定数据库
+python test_vector_dbs.py --db-type chroma
+python test_vector_dbs.py --db-type faiss
+```
+
+### 性能对比
+| 数据库 | 存储方式 | 查询性能 | 内存使用 | 适用场景 |
+|--------|----------|----------|----------|----------|
+| ChromaDB | 本地文件 | 中等 | 低 | 开发测试、小规模应用 |
+| FAISS | 本地文件 | 高 | 中等 | 生产环境、大规模数据 |
+| Milvus | 服务端 | 高 | 高 | 企业级、分布式部署 |
+| Qdrant | 服务端 | 高 | 高 | 云原生、微服务架构 |
+
+## �️ 开发指南
 
 ### 添加新功能
 1. **创建模块**：在 `core/` 目录下创建新模块
@@ -543,6 +659,16 @@ tail -f logs/app.log
 3. ✅ 向量数据库是否存在：检查 `res/chroma_db/` 目录
 4. ✅ 环境变量是否正确：检查 `.env` 文件
 5. ✅ 端口是否可用：检查端口 7801 是否被占用
+
+## 架构演进
+
+详细的架构演进说明请参考：[ARCHITECTURE_EVOLUTION.md](ARCHITECTURE_EVOLUTION.md)
+
+该文档描述了向量数据库架构从 V1 到 V2 的完整演进过程，包括：
+- 架构设计理念的变化
+- 代码结构的优化
+- 性能对比分析
+- 迁移指南和最佳实践
 
 ## 许可证
 

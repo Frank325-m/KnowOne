@@ -58,6 +58,23 @@ class Settings(BaseSettings):
     )
     
     # ============ 向量检索配置 ============
+    # 向量数据库配置
+    VECTOR_DB_TYPE: str = Field(default="chroma", description="向量数据库类型: chroma/faiss/milvus/qdrant")
+    VECTOR_DB_COLLECTION: str = Field(default="rag_knowledge_base", description="向量数据库集合名称")
+    VECTOR_DB_PERSIST: bool = Field(default=True, description="是否持久化向量数据库")
+    
+    # Milvus 配置
+    MILVUS_HOST: str = Field(default="localhost", description="Milvus 主机地址")
+    MILVUS_PORT: int = Field(default=19530, description="Milvus 端口")
+    MILVUS_USER: str = Field(default="", description="Milvus 用户名")
+    MILVUS_PASSWORD: str = Field(default="", description="Milvus 密码")
+    
+    # Qdrant 配置
+    QDRANT_HOST: str = Field(default="localhost", description="Qdrant 主机地址")
+    QDRANT_PORT: int = Field(default=6333, description="Qdrant 端口")
+    QDRANT_API_KEY: str = Field(default="", description="Qdrant API密钥")
+    QDRANT_PREFER_GRPC: bool = Field(default=False, description="是否优先使用gRPC协议")
+    
     # 检索配置
     DEFAULT_TOP_K: int = Field(default=3, ge=1, le=20, description="默认检索数量")
     FETCH_K: int = Field(default=10, ge=1, le=50, description="MMR 初始召回数量")
