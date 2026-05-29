@@ -100,12 +100,6 @@ my-rag-project/
 ├── .gitignore          # Git 忽略文件
 ├── Dockerfile          # Docker 构建文件
 ├── docker-compose.yml  # Docker 编排文件
-├── deploy.sh           # 部署脚本（Linux/Mac）
-├── deploy.bat          # 部署脚本（Windows）
-├── test_docker.sh      # Docker 测试脚本（Linux/Mac）
-├── test_docker.bat     # Docker 测试脚本（Windows）
-├── DEPLOYMENT.md       # 详细部署文档
-├── QUICK_DEPLOY.md     # 快速部署指南
 └── README.md           # 项目说明
 ```
 
@@ -115,15 +109,15 @@ my-rag-project/
 
 #### Linux/Mac
 ```bash
-git clone <项目地址>
-cd my-rag-project
+git clone https://github.com/Frank325-m/KnowOne.git
+cd KnowOne
 ./deploy.sh full
 ```
 
 #### Windows
 ```cmd
-git clone <项目地址>
-cd my-rag-project
+git clone https://github.com/Frank325-m/KnowOne.git
+cd KnowOne
 deploy.bat full
 ```
 
@@ -157,31 +151,13 @@ docker-compose down -v
 
 详细部署文档请参考 [DEPLOYMENT.md](DEPLOYMENT.md) 或 [QUICK_DEPLOY.md](QUICK_DEPLOY.md)。
 
-## 🚀 快速开始
-
-### 方式一：Docker 一键部署（推荐）
-
-#### Linux/Mac
-```bash
-git clone <项目地址>
-cd my-rag-project
-./deploy.sh full
-```
-
-#### Windows
-```cmd
-git clone <项目地址>
-cd my-rag-project
-deploy.bat full
-```
-
 ### 方式二：本地开发部署
 
 #### 1. 环境配置
 ```bash
 # 克隆项目
-git clone <项目地址>
-cd my-rag-project
+git clone https://github.com/Frank325-m/KnowOne.git
+cd KnowOne
 
 # 创建虚拟环境
 python -m venv venv

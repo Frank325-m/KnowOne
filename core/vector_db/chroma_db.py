@@ -2,11 +2,12 @@ from typing import List
 from langchain_core.documents import Document
 from langchain_community.vectorstores import Chroma
 from core.vector_db.base_vector_db import BaseVectorStore
+from config.settings import settings
 
 class ChromaStore(BaseVectorStore):
-    def __init__(self, embedding, persist_dir="./resource/vector_db/chroma_db"):
+    def __init__(self, embedding, persist_dir=None):
         super().__init__(embedding)
-        self.persist_dir = persist_dir
+        self.persist_dir = persist_dir or str(settings.get_vector_db_dir("chroma"))
         self.db = None
     
     def add_documents(self, documents: List[Document]) -> None:
@@ -53,3 +54,12 @@ class ChromaStore(BaseVectorStore):
                     print(f"已将目录重命名为: {new_name}")
                 except:
                     pass
+    
+    def get_document_count(self) -> int:
+        """获取文档数量"""
+        if self.db is None:
+            return 0
+        try:
+            return self.db._collection.count()
+        except:
+            return 0

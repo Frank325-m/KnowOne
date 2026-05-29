@@ -17,13 +17,10 @@ from core.exceptions import DocumentError, ConfigError
 def ensure_directory(directory_path: Union[str, Path]) -> Path:
     """
     确保目录存在，如果不存在则创建
-    
     Args:
         directory_path: 目录路径
-        
     Returns:
         创建或存在的目录路径
-        
     Raises:
         ConfigError: 如果无法创建目录
     """
@@ -42,13 +39,10 @@ def ensure_directory(directory_path: Union[str, Path]) -> Path:
 def get_file_size(file_path: Union[str, Path]) -> int:
     """
     获取文件大小（字节）
-    
     Args:
         file_path: 文件路径
-        
     Returns:
         文件大小（字节）
-        
     Raises:
         DocumentError: 如果文件不存在或无法访问
     """
@@ -68,10 +62,8 @@ def get_file_size(file_path: Union[str, Path]) -> int:
 def format_file_size(size_bytes: int) -> str:
     """
     格式化文件大小为可读格式
-    
     Args:
         size_bytes: 文件大小（字节）
-        
     Returns:
         格式化后的文件大小字符串
     """
@@ -88,10 +80,8 @@ def format_file_size(size_bytes: int) -> str:
 def get_file_extension(file_path: Union[str, Path]) -> str:
     """
     获取文件扩展名（小写）
-    
     Args:
         file_path: 文件路径
-        
     Returns:
         文件扩展名（小写，包含点）
     """
@@ -102,11 +92,9 @@ def get_file_extension(file_path: Union[str, Path]) -> str:
 def is_supported_file(file_path: Union[str, Path], supported_extensions: List[str]) -> bool:
     """
     检查文件是否支持
-    
     Args:
         file_path: 文件路径
         supported_extensions: 支持的扩展名列表
-        
     Returns:
         是否支持该文件
     """
@@ -121,15 +109,12 @@ def list_files_in_directory(
 ) -> List[Path]:
     """
     列出目录中的文件
-    
     Args:
         directory: 目录路径
         extensions: 过滤的扩展名列表，如果为 None 则返回所有文件
         recursive: 是否递归搜索
-        
     Returns:
         文件路径列表
-        
     Raises:
         ConfigError: 如果目录不存在或无法访问
     """
@@ -168,14 +153,11 @@ def list_files_in_directory(
 def safe_delete_file(file_path: Union[str, Path], backup: bool = True) -> bool:
     """
     安全删除文件（可选备份）
-    
     Args:
         file_path: 文件路径
         backup: 是否先备份
-        
     Returns:
         是否成功删除
-        
     Raises:
         DocumentError: 如果文件操作失败
     """
@@ -210,14 +192,11 @@ def safe_delete_file(file_path: Union[str, Path], backup: bool = True) -> bool:
 def backup_file(file_path: Union[str, Path], backup_dir: Optional[Union[str, Path]] = None) -> Path:
     """
     备份文件
-    
     Args:
         file_path: 原文件路径
         backup_dir: 备份目录，如果为 None 则使用原文件所在目录
-        
     Returns:
         备份文件路径
-        
     Raises:
         DocumentError: 如果备份失败
     """
@@ -255,14 +234,11 @@ def backup_file(file_path: Union[str, Path], backup_dir: Optional[Union[str, Pat
 def calculate_md5(file_path: Union[str, Path], chunk_size: int = 8192) -> str:
     """
     计算文件的 MD5 哈希值
-    
     Args:
         file_path: 文件路径
         chunk_size: 读取块大小
-        
     Returns:
         MD5 哈希值
-        
     Raises:
         DocumentError: 如果无法计算哈希值
     """
@@ -294,15 +270,12 @@ def read_text_file(
 ) -> str:
     """
     读取文本文件
-    
     Args:
         file_path: 文件路径
         encoding: 文件编码
         errors: 编码错误处理方式
-        
     Returns:
         文件内容
-        
     Raises:
         DocumentError: 如果无法读取文件
     """
@@ -338,13 +311,11 @@ def write_text_file(
 ) -> None:
     """
     写入文本文件
-    
     Args:
         file_path: 文件路径
         content: 要写入的内容
         encoding: 文件编码
         backup: 如果文件存在是否备份
-        
     Raises:
         DocumentError: 如果无法写入文件
     """
@@ -378,15 +349,12 @@ def copy_file_safe(
 ) -> bool:
     """
     安全复制文件
-    
     Args:
         source: 源文件路径
         destination: 目标文件路径
         overwrite: 是否覆盖已存在的文件
-        
     Returns:
         是否成功复制
-        
     Raises:
         DocumentError: 如果复制失败
     """
@@ -419,13 +387,10 @@ def copy_file_safe(
 def get_file_info(file_path: Union[str, Path]) -> dict:
     """
     获取文件的详细信息
-    
     Args:
         file_path: 文件路径
-        
     Returns:
         文件信息字典
-        
     Raises:
         DocumentError: 如果无法获取文件信息
     """

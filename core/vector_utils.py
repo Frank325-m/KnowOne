@@ -2,6 +2,7 @@
 向量数据库工具模块
 处理向量数据库的创建、加载、检索等操作
 支持多种向量数据库：ChromaDB、FAISS、Milvus、Qdrant
+使用新的向量数据库架构
 """
 
 import os
@@ -10,23 +11,19 @@ from typing import List, Tuple, Optional, Callable, Union
 from pathlib import Path
 
 from langchain_core.documents import Document
-from langchain_core.vectorstores import VectorStore
 from langchain_ollama import OllamaEmbeddings
 
 from config.settings import settings
 from config.logging_config import get_logger
 from core.exceptions import (
     VectorDBError,
-    VectorDBNotFoundError,
-    VectorDBCreationError,
-    VectorDBQueryError,
-    ModelError,
-    EmbeddingError,
     RetrievalError,
     NoRelevantDocumentsError,
+    EmbeddingError,
     handle_rag_error
 )
-from core.vector_factory import VectorStoreFactory
+from core.vector_db.vector_db_factory import get_vector_store
+from core.vector_db.base_vector_db import BaseVectorStore
 
 # 获取日志记录器
 logger = get_logger(__name__)
@@ -68,7 +65,7 @@ def create_vector_store(
     chunk_docs: List[Document],
     persist_dir: Optional[Path] = None,
     collection_name: str = None
-) -> VectorStore:
+) -> BaseVectorStore:
     """
     创建向量数据库
     把切块后的文本-> 向量化 -> 存入向量数据库
@@ -80,10 +77,10 @@ def create_vector_store(
         collection_name: 集合名称
         
     Returns:
-        VectorStore 实例
+        BaseVectorStore 实例
         
     Raises:
-        VectorDBCreationError: 如果无法创建向量数据库
+        VectorDBError: 如果无法创建向量数据库
     """
     try:
         logger.info(f"正在创建 {settings.VECTOR_DB_TYPE} 向量数据库，文档数量: {len(chunk_docs)}")
@@ -92,11 +89,13 @@ def create_vector_store(
         embedding_model = get_embedding_model()
         
         # 使用工厂创建向量数据库
-        vector_store = VectorStoreFactory.create_vector_store(
-            documents=chunk_docs,
-            embedding=embedding_model,
-            collection_name=collection_name
+        vector_store = get_vector_store(
+            engine=settings.VECTOR_DB_TYPE,
+            embedding=embedding_model
         )
+        
+        # 添加文档
+        vector_store.add_documents(chunk_docs)
         
         logger.info(f"{settings.VECTOR_DB_TYPE} 向量数据库创建成功")
         
@@ -104,9 +103,9 @@ def create_vector_store(
         
     except Exception as e:
         logger.error(f"向量数据库创建失败: {e}")
-        raise VectorDBCreationError(
-            db_path=VectorStoreFactory._get_db_path(),
-            error=str(e)
+        raise VectorDBError(
+            message=f"无法创建向量数据库: {str(e)}",
+            details={"error": str(e)}
         )
 
 
@@ -114,7 +113,7 @@ def create_vector_store(
 def load_existing_vector_store(
     persist_dir: Optional[Path] = None,
     collection_name: str = None
-) -> VectorStore:
+) -> BaseVectorStore:
     """
     加载已存在的向量数据库
     
@@ -123,10 +122,9 @@ def load_existing_vector_store(
         collection_name: 集合名称
         
     Returns:
-        VectorStore 实例
+        BaseVectorStore 实例
         
     Raises:
-        VectorDBNotFoundError: 如果向量数据库不存在
         VectorDBError: 如果无法加载向量数据库
     """
     try:
@@ -136,87 +134,19 @@ def load_existing_vector_store(
         embedding_model = get_embedding_model()
         
         # 使用工厂加载向量数据库
-        vector_store = VectorStoreFactory.load_vector_store(
-            embedding=embedding_model,
-            collection_name=collection_name
+        vector_store = get_vector_store(
+            engine=settings.VECTOR_DB_TYPE,
+            embedding=embedding_model
         )
         
         logger.info(f"{settings.VECTOR_DB_TYPE} 向量数据库加载成功")
         
         return vector_store
         
-    except VectorDBNotFoundError as e:
-        raise e
     except Exception as e:
         logger.error(f"向量数据库加载失败: {e}")
         raise VectorDBError(
-            message="无法加载向量数据库",
-            db_path=VectorStoreFactory._get_db_path(),
-            details={"error": str(e)}
-        )
-
-
-@handle_rag_error
-def get_retriever(
-    top_k: int = None,
-    search_type: str = None,
-    fetch_k: int = None,
-    lambda_mult: float = None
-):
-    """
-    获取向量数据库的检索器
-    
-    Args:
-        top_k: 每次召回最相关的文本块数量
-        search_type: 搜索类型 ("similarity" 或 "mmr")
-        fetch_k: MMR 搜索的初始召回数量
-        lambda_mult: MMR 多样性权重 (0.0-1.0)
-        
-    Returns:
-        检索器实例
-        
-    Raises:
-        VectorDBError: 如果无法获取检索器
-    """
-    try:
-        # 使用配置值或参数值
-        if top_k is None:
-            top_k = settings.DEFAULT_TOP_K
-        if search_type is None:
-            search_type = settings.SEARCH_TYPE
-        if fetch_k is None:
-            fetch_k = settings.FETCH_K
-        if lambda_mult is None:
-            lambda_mult = settings.LAMBDA_MULT
-        
-        logger.info(f"获取检索器，配置: top_k={top_k}, search_type={search_type}")
-        
-        # 加载向量数据库
-        vector_store = load_existing_vector_store()
-        
-        # 配置搜索参数
-        search_kwargs = {"k": top_k}
-        
-        if search_type == "mmr":
-            search_kwargs.update({
-                "fetch_k": fetch_k,
-                "lambda_mult": lambda_mult
-            })
-            logger.info(f"MMR 搜索配置: fetch_k={fetch_k}, lambda_mult={lambda_mult}")
-        
-        # 创建检索器
-        retriever = vector_store.as_retriever(
-            search_type=search_type,
-            search_kwargs=search_kwargs
-        )
-        
-        logger.info("检索器创建成功")
-        return retriever
-        
-    except Exception as e:
-        logger.error(f"检索器创建失败: {e}")
-        raise VectorDBError(
-            message="无法创建检索器",
+            message=f"无法加载向量数据库: {str(e)}",
             details={"error": str(e)}
         )
 
@@ -247,17 +177,21 @@ def search_knowledge(
         
         logger.info(f"开始检索: '{query}'")
         
-        # 获取检索器
-        retriever = get_retriever(top_k=top_k)
+        # 使用配置值或参数值
+        if top_k is None:
+            top_k = settings.DEFAULT_TOP_K
+        
+        # 加载向量数据库
+        vector_store = load_existing_vector_store()
         
         # 执行检索
-        docs = retriever.invoke(query)
+        docs = vector_store.search(query, top_k=top_k)
         
         if not docs:
             logger.warning(f"未找到相关文档: '{query}'")
             raise NoRelevantDocumentsError(
                 query=query,
-                top_k=top_k or settings.DEFAULT_TOP_K
+                top_k=top_k
             )
         
         # 拼接检索到的上下文
@@ -303,109 +237,14 @@ def manual_search_query(
         
         logger.info(f"开始手动检索: '{query}' (top_k={top_k})")
         
-        # 1. 获取嵌入模型
-        emb = get_embedding_model()
-        
-        # 2. 用户问题，手动向量化
-        query_vec = emb.embed_query(query)
-        logger.debug(f"查询向量化完成，向量维度: {len(query_vec)}")
-        
-        # 3. 加载向量库
-        vector_store = load_existing_vector_store()
-        
-        # 4. 相似度检索
-        docs = vector_store.similarity_search_by_vector(query_vec, k=top_k)
-        
-        if not docs:
-            logger.warning(f"手动检索未找到相关文档: '{query}'")
-            raise NoRelevantDocumentsError(
-                query=query,
-                top_k=top_k
-            )
-        
-        # 5. 拼接检索到的上下文
-        context = "\n".join([doc.page_content for doc in docs])
-        
-        logger.info(f"手动检索成功，找到 {len(docs)} 个相关文档")
-        
-        return context, docs
+        # 直接使用 search 方法
+        return search_knowledge(query, top_k=top_k)
         
     except Exception as e:
         logger.error(f"手动检索失败: {e}")
         raise RetrievalError(
             message="手动检索失败",
             query=query,
-            details={"error": str(e)}
-        )
-
-
-@handle_rag_error
-def get_rerank_retriever(
-    top_k: int = None,
-    fetch_k: int = None
-):
-    """
-    获取重排后的检索器
-    
-    Args:
-        top_k: 每次召回最相关的文本块数量
-        fetch_k: 先粗召的文本块数量
-        
-    Returns:
-        tuple: (基础检索器, 压缩函数)
-        
-    Raises:
-        VectorDBError: 如果无法创建检索器
-    """
-    try:
-        if top_k is None:
-            top_k = settings.DEFAULT_TOP_K
-        if fetch_k is None:
-            fetch_k = settings.FETCH_K
-        
-        logger.info(f"创建重排检索器，配置: top_k={top_k}, fetch_k={fetch_k}")
-        
-        # 获取基础检索器
-        base_retriever = load_existing_vector_store().as_retriever(
-            search_type="mmr",
-            search_kwargs={"k": fetch_k}
-        )
-        
-        # 本地轻量化过滤，按字符长度+关键词简单过滤
-        def compress_docs(docs: List[Document], query: str) -> List[Document]:
-            """压缩文档列表"""
-            if not docs:
-                return []
-            
-            logger.debug(f"开始文档压缩，原始文档数: {len(docs)}")
-            
-            filter_docs = []
-            q_words = set(query)
-            
-            for doc in docs:
-                # 过滤过短无效文本
-                if len(doc.page_content) < 50:
-                    logger.debug(f"过滤过短文档: {len(doc.page_content)} 字符")
-                    continue
-                
-                # 粗略匹配关键词
-                match_cnt = sum(1 for w in q_words if w in doc.page_content)
-                if match_cnt > 0:
-                    filter_docs.append(doc)
-            
-            # 限制返回数量
-            result = filter_docs[:top_k]
-            logger.debug(f"文档压缩完成，过滤后文档数: {len(result)}")
-            
-            return result
-        
-        logger.info("重排检索器创建成功")
-        return base_retriever, compress_docs
-        
-    except Exception as e:
-        logger.error(f"重排检索器创建失败: {e}")
-        raise VectorDBError(
-            message="无法创建重排检索器",
             details={"error": str(e)}
         )
 
@@ -432,33 +271,66 @@ def search_with_rerank(
     try:
         logger.info(f"开始带重排检索: '{query}'")
         
-        # 获取重排检索器
-        base_retriever, compress_func = get_rerank_retriever(top_k=top_k)
+        # 使用配置值或参数值
+        if top_k is None:
+            top_k = settings.DEFAULT_TOP_K
         
-        # 执行基础检索
-        raw_docs = base_retriever.invoke(query)
+        # 加载向量数据库
+        vector_store = load_existing_vector_store()
         
-        if not raw_docs:
+        # 获取更多文档用于重排
+        fetch_k = settings.FETCH_K if hasattr(settings, 'FETCH_K') else top_k * 2
+        docs = vector_store.search(query, top_k=fetch_k)
+        
+        if not docs:
             logger.warning(f"重排检索未找到原始文档: '{query}'")
             raise NoRelevantDocumentsError(
                 query=query,
-                top_k=top_k or settings.DEFAULT_TOP_K
+                top_k=top_k
             )
         
-        # 执行重排压缩
-        final_docs = compress_func(raw_docs, query)
+        # 本地轻量化过滤，按字符长度+关键词简单过滤
+        def filter_docs(docs: List[Document], query: str) -> List[Document]:
+            """过滤文档列表"""
+            if not docs:
+                return []
+            
+            logger.debug(f"开始文档过滤，原始文档数: {len(docs)}")
+            
+            filter_docs = []
+            q_words = set(query)
+            
+            for doc in docs:
+                # 过滤过短无效文本
+                if len(doc.page_content) < 50:
+                    logger.debug(f"过滤过短文档: {len(doc.page_content)} 字符")
+                    continue
+                
+                # 粗略匹配关键词
+                match_cnt = sum(1 for w in q_words if w in doc.page_content)
+                if match_cnt > 0:
+                    filter_docs.append(doc)
+            
+            # 限制返回数量
+            result = filter_docs[:top_k]
+            logger.debug(f"文档过滤完成，过滤后文档数: {len(result)}")
+            
+            return result
+        
+        # 执行过滤
+        final_docs = filter_docs(docs, query)
         
         if not final_docs:
             logger.warning(f"重排后无有效文档: '{query}'")
             raise NoRelevantDocumentsError(
                 query=query,
-                top_k=top_k or settings.DEFAULT_TOP_K
+                top_k=top_k
             )
         
         # 拼接检索到的上下文
         context = "\n\n".join([doc.page_content for doc in final_docs])
         
-        logger.info(f"带重排检索成功，原始文档: {len(raw_docs)}，重排后: {len(final_docs)}")
+        logger.info(f"带重排检索成功，原始文档: {len(docs)}，重排后: {len(final_docs)}")
         
         return context, final_docs
         
@@ -485,8 +357,22 @@ def get_vector_store_info() -> dict:
         VectorDBError: 如果无法获取信息
     """
     try:
-        # 使用工厂获取向量数据库信息
-        info = VectorStoreFactory.get_vector_store_info()
+        # 尝试加载向量数据库以获取更多信息
+        document_count = 0
+        try:
+            vector_store = load_existing_vector_store()
+            document_count = vector_store.get_document_count()
+        except:
+            pass
+        
+        # 返回基本信息
+        info = {
+            "db_type": settings.VECTOR_DB_TYPE,
+            "docs_dir": str(settings.DOCS_DIR),
+            "vector_db_dir": str(settings.get_vector_db_dir()),
+            "embedding_model": settings.EMBED_MODEL_NAME,
+            "document_count": document_count
+        }
         
         logger.debug(f"向量数据库信息: {info}")
         return info

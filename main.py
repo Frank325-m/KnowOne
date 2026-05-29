@@ -86,7 +86,7 @@ def create_vector_database(
         vector_store = create_vector_store(chunk_docs)
         
         if vector_store:
-            count = vector_store._collection.count()
+            count = vector_store.get_document_count()
             logger.info(f"向量数据库创建成功，包含 {count} 个向量")
             return True
         else:

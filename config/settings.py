@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     
     # 数据路径
     DOCS_DIR: Path = Field(default=Path("./resource/docs"), description="文档存储目录")
-    VECTOR_DB_DIR: Path = Field(default=Path("./resource/vector_db/chroma_db"), description="向量数据库目录")
+    VECTOR_DB_BASE_DIR: Path = Field(default=Path("./resource/vector_db"), description="向量数据库基础目录")
     MODEL_CACHE_DIR: Path = Field(default=Path("./model_cache"), description="模型缓存目录")
     LOG_DIR: Path = Field(default=Path("./logs"), description="日志目录")
     
@@ -58,8 +58,9 @@ class Settings(BaseSettings):
     )
     
     # ============ 向量检索配置 ============
+    # 向量检索配置
     # 向量数据库配置
-    VECTOR_DB_TYPE: str = Field(default="chroma", description="向量数据库类型: chroma/faiss/milvus/qdrant")
+    VECTOR_DB_TYPE: str = Field(default="faiss", description="向量数据库类型: chroma/faiss/milvus/qdrant")
     VECTOR_DB_COLLECTION: str = Field(default="rag_knowledge_base", description="向量数据库集合名称")
     VECTOR_DB_PERSIST: bool = Field(default=True, description="是否持久化向量数据库")
     
@@ -104,29 +105,52 @@ class Settings(BaseSettings):
     CACHE_ENABLED: bool = Field(default=True, description="是否启用缓存")
     
     # ============ 安全配置 ============
-    ALLOWED_ORIGINS: list = Field(
-        default=["http://localhost:7801", "http://127.0.0.1:7801"],
-        description="允许的跨域来源"
+    ALLOWED_ORIGINS: str = Field(
+        default="http://localhost:7801,http://127.0.0.1:7801",
+        description="允许的跨域来源，用逗号分隔"
     )
+    
+    @property
+    def allowed_origins_list(self) -> list:
+        """获取允许的跨域来源列表"""
+        if not self.ALLOWED_ORIGINS:
+            return []
+        return [origin.strip() for origin in self.ALLOWED_ORIGINS.split(",")]
     
     # ============ 环境变量配置 ============
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
         case_sensitive = False
+        extra = "ignore"
         
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # 确保所有目录存在
         self._ensure_directories()
     
+    def get_vector_db_dir(self, db_type: str = None) -> Path:
+        """
+        获取指定类型向量数据库的目录
+        
+        Args:
+            db_type: 向量数据库类型，如果为 None 则使用当前配置的类型
+            
+        Returns:
+            向量数据库目录路径
+        """
+        if db_type is None:
+            db_type = self.VECTOR_DB_TYPE
+        
+        return self.VECTOR_DB_BASE_DIR / f"{db_type}_db"
+    
     def _ensure_directories(self):
         """确保所有必要的目录存在"""
         directories = [
-            self.DOCS_DIR,
-            self.VECTOR_DB_DIR,
-            self.MODEL_CACHE_DIR,
-            self.LOG_DIR,
+            self.docs_dir_abs,
+            self.vector_db_base_dir_abs,
+            self.model_cache_dir_abs,
+            self.log_dir_abs,
         ]
         
         for directory in directories:
@@ -139,8 +163,13 @@ class Settings(BaseSettings):
     
     @property
     def vector_db_dir_abs(self) -> Path:
-        """获取向量数据库目录的绝对路径"""
-        return self.BASE_DIR / self.VECTOR_DB_DIR
+        """获取当前向量数据库目录的绝对路径（向后兼容）"""
+        return self.BASE_DIR / self.get_vector_db_dir()
+    
+    @property
+    def vector_db_base_dir_abs(self) -> Path:
+        """获取向量数据库基础目录的绝对路径"""
+        return self.BASE_DIR / self.VECTOR_DB_BASE_DIR
     
     @property
     def model_cache_dir_abs(self) -> Path:
@@ -181,5 +210,5 @@ WEB_PORT = settings.WEB_PORT
 
 # 路径配置
 DOCS_DIR = str(settings.docs_dir_abs)
-VECTOR_DB_PATH = str(settings.vector_db_dir_abs)
+VECTOR_DB_PATH = str(settings.get_vector_db_dir())
 LOG_DIR = str(settings.log_dir_abs)

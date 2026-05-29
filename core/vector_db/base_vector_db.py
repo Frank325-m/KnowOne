@@ -21,3 +21,8 @@ class BaseVectorStore(ABC):
     def clear(self) -> None:
         """清空库"""
         pass
+    
+    @abstractmethod
+    def get_document_count(self) -> int:
+        """获取文档数量"""
+        pass
