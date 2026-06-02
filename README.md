@@ -4,12 +4,27 @@
 
 ## 📋 更新日志
 
-### 🎯 最新更新 (2026-05-22)
+### 🎯 最新更新 (2026-05-29)
 
+✅ **项目结构优化**：统一入口点，减少冗余
+- 🚀 **单一入口**：`main.py` 作为唯一入口文件
+- 🗑️ **删除冗余**：移除 `web_rag_app.py` 冗余文件
+- 🌐 **Web 集成**：Web 功能整合到 `main.py`
+- 🎯 **默认 Web**：不提供命令时默认启动 Web 界面
+
+✅ **代码优化**：提升代码质量和用户体验
+- 🐛 **编码修复**：修复 Windows 编码问题
+- 📝 **文档更新**：更新 README 和使用说明
+- 🔧 **接口统一**：所有向量数据库统一接口
+- ✅ **测试验证**：所有功能测试通过
+
+### 📅 历史更新
+
+#### 2026-05-22
 ✅ **向量数据库架构重构**：全新的模块化设计
 - 🏗️ **基类设计**：引入 `BaseVectorStore` 抽象基类
 - 🏭 **工厂模式**：`vector_db_factory.py` 统一创建接口
-- � **插件化架构**：每个向量数据库独立实现
+- 🔌 **插件化架构**：每个向量数据库独立实现
 - 🔄 **向后兼容**：保持原有 API 接口不变
 
 ✅ **新增向量数据库支持**：
@@ -17,18 +32,6 @@
 - 📊 **FAISS**：Facebook AI 相似性搜索库
 - ☁️ **Milvus**：云原生向量数据库
 - ⚡ **Qdrant**：高性能向量搜索引擎
-
-✅ **代码质量提升**：
-- 🔧 **类型提示**：完整的 Python 类型注解
-- 🐛 **错误修复**：修复了 FAISS 实现中的语法错误
-- � **文档更新**：完整的 API 使用示例
-
-### 📅 历史更新
-
-#### 2026-05-22
-- ✅ **多向量数据库支持**：安装 faiss、milvus、qdrant 依赖
-- ✅ **配置系统扩展**：添加向量数据库类型配置
-- ✅ **工厂模式实现**：`VectorStoreFactory` 支持无缝切换
 
 #### 2026-05-21
 - ✅ **Docker 部署**：添加 Dockerfile 和 docker-compose.yml
@@ -47,11 +50,12 @@
 - ✅ **RAG 问答**：基于本地大模型的智能问答
 
 ### 🔄 系统状态
-- **向量数据库**：✅ 正常 (428 个向量)
+- **向量数据库**：✅ 正常 (支持 4 种数据库)
 - **文档处理**：✅ 正常 (支持 PDF/TXT/DOCX)
 - **大模型**：✅ 正常 (Ollama Qwen 4B)
 - **Web 应用**：✅ 正常 (Gradio 6.x)
 - **部署支持**：✅ 正常 (Docker + 本地)
+- **代码结构**：✅ 优化完成
 
 ## 功能特性
 
@@ -93,8 +97,7 @@ my-rag-project/
 │   └── file_utils.py    # 文件工具
 ├── web/                 # Web 应用
 │   └── app.py           # Web 应用主文件
-├── main.py              # 命令行入口
-├── web_rag_app.py       # Web 应用入口
+├── main.py              # 统一入口（命令行 + Web）
 ├── requirements.txt     # 依赖包列表
 ├── .env.example         # 环境变量示例
 ├── .gitignore          # Git 忽略文件
@@ -103,7 +106,56 @@ my-rag-project/
 └── README.md           # 项目说明
 ```
 
-## 🐳 Docker 容器化部署（推荐）
+## � 快速开始
+
+### 统一入口使用
+
+现在所有功能都集成在 `main.py` 中：
+
+```bash
+# 启动 Web 界面（默认）
+python main.py
+# 或
+python main.py web
+
+# 命令行工具
+python main.py info           # 显示系统信息
+python main.py test           # 测试系统功能
+python main.py create         # 创建向量数据库
+python main.py search "查询"   # 搜索文档
+python main.py chat "问题"     # RAG 问答
+python main.py interactive    # 交互式模式
+
+# 查看帮助
+python main.py --help
+```
+
+### 常见问题解答
+
+#### Q: 为什么测试时显示 "未找到相关文档"？
+**A**: 这是正常现象，不是错误！原因：
+1. 向量数据库是空的（还没有上传文档）
+2. 当搜索时，系统找不到相关文档
+3. 系统会返回 "暂无相关知识库内容"
+
+**解决方法**：
+1. 上传文档到 `res/docs/` 目录
+2. 运行 `python main.py create` 创建向量数据库
+3. 然后就可以正常搜索和问答了
+
+#### Q: 如何切换向量数据库？
+**A**: 在 `.env` 文件中设置：
+```bash
+VECTOR_DB_TYPE=faiss      # 可选: chroma, faiss, milvus, qdrant
+```
+
+#### Q: 如何查看系统状态？
+**A**: 使用以下命令：
+```bash
+python main.py info
+```
+
+## �� Docker 容器化部署（推荐）
 
 ### 一键部署
 

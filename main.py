@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-RAG 知识库问答系统命令行工具
-提供向量数据库管理、系统测试和问答功能
+RAG 知识库问答系统
+提供命令行工具和 Web 界面
 """
 
 import sys
@@ -33,6 +33,7 @@ from core.llm_utils import (
     simple_chat
 )
 from core.exceptions import RAGError, VectorDBNotFoundError
+from web.app import launch_app
 
 # 设置日志
 logger = get_logger(__name__)
@@ -367,47 +368,47 @@ def test_system() -> None:
     try:
         logger.info("测试系统功能")
         
-        print("\n🧪 系统功能测试")
+        print("\n[TEST] 系统功能测试")
         print("=" * 40)
         
         # 1. 测试模型连接
         print("\n1. 测试模型连接...")
         model_test = test_model_connection()
         if model_test.get("success", False):
-            print(f"   ✅ 模型连接正常: {model_test.get('model_name', 'N/A')}")
+            print(f"   [OK] 模型连接正常: {model_test.get('model_name', 'N/A')}")
             print(f"      响应: {model_test.get('response', 'N/A')[:100]}...")
         else:
-            print(f"   ❌ 模型连接失败: {model_test.get('error', '未知错误')}")
+            print(f"   [ERROR] 模型连接失败: {model_test.get('error', '未知错误')}")
         
         # 2. 测试向量数据库
         print("\n2. 测试向量数据库...")
         vector_info = get_vector_store_info()
         if vector_info.get("exists", False):
-            print(f"   ✅ 向量数据库正常")
+            print(f"   [OK] 向量数据库正常")
             print(f"      集合: {vector_info.get('collection_name', 'N/A')}")
             print(f"      文档数: {vector_info.get('document_count', 0)}")
         else:
-            print(f"   ⚠️ 向量数据库: {vector_info.get('message', 'N/A')}")
+            print(f"   [WARNING] 向量数据库: {vector_info.get('message', 'N/A')}")
         
         # 3. 测试文档目录
         print("\n3. 测试文档目录...")
         docs_dir = settings.docs_dir_abs
         if docs_dir.exists():
             docs_files = list(docs_dir.glob("*"))
-            print(f"   ✅ 文档目录正常: {len(docs_files)} 个文件")
+            print(f"   [OK] 文档目录正常: {len(docs_files)} 个文件")
         else:
-            print(f"   ⚠️ 文档目录不存在: {docs_dir}")
+            print(f"   [WARNING] 文档目录不存在: {docs_dir}")
         
         # 4. 测试 RAG 问答
         print("\n4. 测试 RAG 问答...")
         try:
             test_question = "测试 RAG 系统"
             response = rag_chat(test_question)
-            print(f"   ✅ RAG 问答正常")
+            print(f"   [OK] RAG 问答正常")
             print(f"      问题: {test_question}")
             print(f"      回答: {response[:100]}...")
         except Exception as e:
-            print(f"   ❌ RAG 问答失败: {e}")
+            print(f"   [ERROR] RAG 问答失败: {e}")
         
         print("\n" + "=" * 40)
         print("测试完成！")
@@ -433,6 +434,7 @@ def interactive_mode() -> None:
         print("  d: 创建向量数据库")
         print("  l: 加载向量数据库")
         print("  test: 系统测试")
+        print("  web: 启动 Web 界面")
         print("=" * 40)
         
         while True:
@@ -485,9 +487,14 @@ def interactive_mode() -> None:
                 elif command == 'test':
                     test_system()
                 
+                elif command == 'web':
+                    print("启动 Web 界面...")
+                    start_web_app()
+                    print("Web 界面已关闭")
+                
                 else:
                     print(f"未知命令: {command}")
-                    print("可用命令: q, s, c, t, i, d, l, test")
+                    print("可用命令: q, s, c, t, i, d, l, test, web")
                     
             except KeyboardInterrupt:
                 print("\n退出交互式模式")
@@ -498,6 +505,23 @@ def interactive_mode() -> None:
     except Exception as e:
         logger.error(f"交互式模式失败: {e}")
         print(f"交互式模式失败: {e}")
+
+
+def start_web_app(server_name: Optional[str] = None, server_port: Optional[int] = None) -> None:
+    """
+    启动 Web 应用
+    
+    Args:
+        server_name: 服务器主机名
+        server_port: 服务器端口
+    """
+    try:
+        logger.info("启动 Web 应用")
+        launch_app(server_name=server_name, server_port=server_port)
+    except Exception as e:
+        logger.error(f"启动 Web 应用失败: {e}")
+        print(f"启动 Web 应用失败: {e}")
+        sys.exit(1)
 
 
 def main():
@@ -511,6 +535,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
+  %(prog)s web             # 启动 Web 界面
   %(prog)s create          # 创建向量数据库
   %(prog)s load           # 加载向量数据库
   %(prog)s search "查询"   # 搜索文档
@@ -518,14 +543,16 @@ def main():
   %(prog)s info           # 显示系统信息
   %(prog)s test           # 测试系统功能
   %(prog)s interactive    # 进入交互式模式
-        
-Web 界面:
-  python web_rag_app.py   # 启动 Web 应用
         """
     )
     
     # 子命令
     subparsers = parser.add_subparsers(dest='command', help='子命令')
+    
+    # web 命令: 启动 Web 应用
+    web_parser = subparsers.add_parser('web', help='启动 Web 界面')
+    web_parser.add_argument('--host', help='服务器主机名')
+    web_parser.add_argument('--port', type=int, help='服务器端口')
     
     # create 命令: 创建向量数据库
     create_parser = subparsers.add_parser('create', help='创建向量数据库')
@@ -568,15 +595,19 @@ Web 界面:
     # 解析参数
     args = parser.parse_args()
     
-    # 如果没有提供命令，显示帮助
+    # 如果没有提供命令，默认启动 Web 界面
     if not args.command:
-        parser.print_help()
-        sys.exit(0)
+        logger.info("未提供命令，默认启动 Web 界面")
+        start_web_app()
+        return
     
     try:
         logger.info(f"执行命令: {args.command}")
         
-        if args.command == 'create':
+        if args.command == 'web':
+            start_web_app(server_name=args.host, server_port=args.port)
+        
+        elif args.command == 'create':
             success = create_vector_database(
                 docs_dir=args.docs_dir,
                 clean=not args.no_clean,
